@@ -48,7 +48,7 @@ resource "aws_iam_role" "iam_for_lambda" {
 resource "aws_lambda_function" "lab-lambda" {
   filename      = "test.zip"
   function_name = "lab-lambda"
-  runtime       = "nodejs22.x"
+  runtime       = "nodejs"
   role          = aws_iam_role.iam_for_lambda.arn
   handler       = "index.handler"
 }
