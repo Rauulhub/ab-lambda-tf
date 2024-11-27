@@ -47,7 +47,7 @@ resource "aws_lambda_function" "lab-lambda" {
 
 resource "aws_api_gateway_rest_api" "lambda_api" {
   name = "lambda_api"
-  body = file("/lab-apirest-prod-oas30-apigateway.json.json") # Ruta al archivo JSON
+  body = templatefile("./lab-apirest-prod-oas30-apigateway.json.json", {}) # Ruta al archivo JSON
 }
 
 # Crear un recurso de integración Lambda en API Gateway
@@ -76,7 +76,7 @@ resource "aws_lambda_permission" "api_gw_invoke_permission" {
   function_name = aws_lambda_function.lab-lambda.function_name
   principal     = "apigateway.amazonaws.com"
 
-  source_arn = "${aws_api_gateway_rest_api.api.execution_arn}/*/*"
+  source_arn = "${aws_api_gateway_rest_api.lambda-api.execution_arn}/*/*"
 }
 # Crear una implementación de la API
 resource "aws_api_gateway_deployment" "deployment" {
