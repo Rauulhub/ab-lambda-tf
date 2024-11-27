@@ -17,17 +17,8 @@ terraform {
 provider "aws" {
   region = "us-east-1"
 }
-resource "aws_api_gateway_rest_api" "lambda_api" {
-  name = "lambda_api"
-  body = jsonencode({
-    openapi = "3.0.1"
-    info = {
-      title   = "lab-apirest-prod-oas30-apigateway.json"
-      version = "1.0"
-    }
-  })
 
-}
+#policy lambda
 data "aws_iam_policy_document" "assume_role" {
   statement {
     effect = "Allow"
@@ -40,6 +31,7 @@ data "aws_iam_policy_document" "assume_role" {
     actions = ["sts:AssumeRole"]
   }
 }
+#iam role lambda
 resource "aws_iam_role" "iam_for_lambda" {
   name               = "iam_for_lambda"
   assume_role_policy = data.aws_iam_policy_document.assume_role.json
@@ -53,3 +45,45 @@ resource "aws_lambda_function" "lab-lambda" {
   handler       = "index.handler"
 }
 
+resource "aws_api_gateway_rest_api" "lambda_api" {
+  name = "lambda_api"
+  body = templatefile("${path.module}/lab-apirest-prod-oas30-apigateway.json", {})
+}
+
+# Crear un recurso de integración Lambda en API Gateway
+resource "aws_api_gateway_integration" "lambda_integration" {
+  rest_api_id = aws_api_gateway_rest_api.lambda_api.id
+  resource_id = aws_api_gateway_rest_api.lambda_api.root_resource_id
+  http_method = aws_api_gateway_method.lambda_method.http_method
+
+  integration_http_method = "POST"
+  type                    = "AWS_PROXY"
+  uri                     = aws_lambda_function.lab-lambda.invoke_arn
+}
+
+# Crear un método para manejar las peticiones en la API
+resource "aws_api_gateway_method" "lambda_method" {
+  rest_api_id   = aws_api_gateway_rest_api.lambda_api.id
+  resource_id   = aws_api_gateway_rest_api.lambda_api.root_resource_id
+  http_method   = "ANY"
+  authorization = "NONE"
+}
+
+# Crear un permiso para que API Gateway invoque la Lambda
+resource "aws_lambda_permission" "api_gw_invoke_permission" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.lab-lambda.function_name
+  principal     = "apigateway.amazonaws.com"
+
+  source_arn = "${aws_api_gateway_rest_api.lambda_api.execution_arn}/*/*"
+}
+# Crear una implementación de la API
+resource "aws_api_gateway_deployment" "deployment" {
+  rest_api_id = aws_api_gateway_rest_api.lambda_api.id
+
+  depends_on = [
+    aws_api_gateway_method.lambda_method,
+    aws_api_gateway_integration.lambda_integration,
+  ]
+}
