@@ -28,12 +28,28 @@ resource "aws_api_gateway_rest_api" "lambda_api" {
   })
         
 }
+data "aws_iam_policy_document" "assume_role" {
+  statement {
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["lambda.amazonaws.com"]
+    }
+
+    actions = ["sts:AssumeRole"]
+  }
+}
+resource "aws_iam_role" "iam_for_lambda" {
+  name               = "iam_for_lambda"
+  assume_role_policy = data.aws_iam_policy_document.assume_role.json
+}
 
 resource "aws_lambda_function" "lab-lambda" {
   filename      = "test.zip"
   function_name = "lab-lambda"
   runtime = "nodejs22.x"
-  role= "${secrets.AWS_ROLE}"
+  role= aws_iam_role.iam_for_lambda.arn
   handler       = "index.handler"
 } 
 
