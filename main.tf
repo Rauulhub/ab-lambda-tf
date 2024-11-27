@@ -48,7 +48,7 @@ resource "aws_lambda_function" "lab-lambda" {
 resource "aws_api_gateway_rest_api" "lambda_api" {
   name = "lambda_api"
   body = templatefile("${path.module}/lab-apirest-prod-oas30-apigateway.json", {})
-  }
+}
 
 # Crear un recurso de integración Lambda en API Gateway
 resource "aws_api_gateway_integration" "lambda_integration" {
